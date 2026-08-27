@@ -1,5 +1,6 @@
 import datetime
 import os
+import shutil
 import subprocess
 import sys
 from ansi2html import Ansi2HTMLConverter
@@ -22,6 +23,7 @@ TARGET_SCRIPTS = [
 ]
 
 OUTPUT_PDF = "daily_scroll.pdf"
+KINDLE_DIR = "/media/compy/Kindle/documents/"
 
 
 def run_script_and_capture_output(script_name: str) -> str:
@@ -82,7 +84,6 @@ def generate_pdf(sections: list, output_filename: str):
         <title>The Daily Scroll - {today_str}</title>
         <style>
             @page {{
-                /* Optimized page margins for smaller 6-inch E-Ink screens */
                 size: A4;
                 margin: 0.8cm;
                 @bottom-right {{
@@ -118,12 +119,9 @@ def generate_pdf(sections: list, output_filename: str):
                 display: block;
                 margin-top: 4px;
             }}
-            
-            /* DYNAMIC FLOW: Removed page-break-inside avoid so sections flow naturally across pages */
             .section {{
                 margin-bottom: 24px;
             }}
-            
             .section-header {{
                 font-size: 18pt;
                 font-weight: bold;
@@ -134,15 +132,13 @@ def generate_pdf(sections: list, output_filename: str):
                 padding-bottom: 4px;
                 color: #000;
             }}
-            
-            /* KINDLE READABILITY: Monospace terminal font bumped up significantly */
             .terminal-output {{
                 background-color: #f4f4f4;
                 border: 1px solid #ccc;
                 border-radius: 4px;
                 padding: 12px 14px;
                 font-family: "Courier New", Courier, monospace;
-                font-size: 15pt; /* Increased size for small high-DPI Kindle screens */
+                font-size: 12.5pt;
                 line-height: 1.45;
                 white-space: pre-wrap;
                 word-wrap: break-word;
@@ -163,6 +159,19 @@ def generate_pdf(sections: list, output_filename: str):
     HTML(string=full_html).write_pdf(output_filename)
 
 
+def sync_to_kindle(source_pdf: str, kindle_dir: str):
+    """Safely copies the generated PDF to the Kindle documents directory if mounted."""
+    if os.path.exists(kindle_dir) and os.path.isdir(kindle_dir):
+        destination = os.path.join(kindle_dir, os.path.basename(source_pdf))
+        try:
+            shutil.copy2(source_pdf, destination)
+            print(f"📖 Kindle detected! Successfully copied to {destination}")
+        except Exception as e:
+            print(f"⚠️ Kindle folder exists, but failed to copy file: {e}")
+    else:
+        print(f"ℹ️ Kindle not detected at '{kindle_dir}'. Skipping Kindle transfer.")
+
+
 def main():
     print("🚀 Gathering output from scripts...")
     collected_data = []
@@ -177,7 +186,10 @@ def main():
 
     print(f"📄 Compiling outputs into '{OUTPUT_PDF}'...")
     generate_pdf(collected_data, OUTPUT_PDF)
-    print(f"✨ Done! Daily Scroll PDF generated successfully: {OUTPUT_PDF}")
+    print(f"✨ Local PDF generated successfully: {OUTPUT_PDF}")
+
+    # Check and sync to Kindle if connected via USB
+    sync_to_kindle(OUTPUT_PDF, KINDLE_DIR)
 
 
 if __name__ == "__main__":

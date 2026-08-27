@@ -1,23 +1,27 @@
-import requests
+jmport requests
 from bs4 import BeautifulSoup
 import time
 
-# ==========================================
-# CONFIGURATION
-# ==========================================
-# Number of top trending repos to fetch per language
-LIMIT = 5
+#################
+# CONFIGURATION #
+#################
+
+# = {{{
 
 # Array of target programming languages (slugs used in GitHub URLs)
-# Use lowercase names (e.g., 'python', 'javascript', 'c++', 'typescript', 'rust', 'go')
-LANGUAGES = ["python", "javascript", "rust", "go"]
+#    Use lowercase names (e.g., 'python', 'javascript', 'c++', 'typescript', 'rust', 'go')
+LANGUAGES = ["python", "javascript", "rust", "go", "c++"]
+NUM_REPOS = 6 # Number of top trending repos to fetch per language
+TIME_PERIOD = "daily" # Optional: Set trending period -> 'daily', 'weekly', or 'monthly'
 
-# Optional: Set trending period -> 'daily', 'weekly', or 'monthly'
-SINCE = "daily" 
+# = }}}
 
-# ==========================================
-# SCRAPER FUNCTIONS
-# ==========================================
+####################
+# SCRAPE FUNCTIONS #
+####################
+
+# = {{{
+
 def scrape_github_trending(language, limit, since="daily"):
     """Scrapes the top N trending repositories for a given language."""
     url = f"https://github.com/trending/{language}?since={since}"
@@ -46,10 +50,11 @@ def scrape_github_trending(language, limit, since="daily"):
         if not h2_tag or not h2_tag.find("a"):
             continue
             
+        # Url Formatting
         repo_link = h2_tag.find("a")
         relative_path = repo_link.get("href", "").strip()
-        repo_name = "".join(relative_path.split())  # Clean up whitespace/newlines
-        full_url = f"https://github.com{relative_path}"
+        repo_name = "".join(relative_path.split())          # Clean up whitespace/newlines
+        # full_url = f"https://github.com{relative_path}"
         
         # Extract description
         p_tag = row.find("p", class_="col-9")
@@ -63,9 +68,10 @@ def scrape_github_trending(language, limit, since="daily"):
         stars_today_tag = row.find("span", class_="float-sm-right")
         stars_today = stars_today_tag.text.strip() if stars_today_tag else "N/A"
 
+
+            # "url": full_url, # Didn't like how it shows, plus I can't click it on paper
         results.append({
             "name": repo_name,
-            "url": full_url,
             "description": description,
             "stars": stars,
             "period_stars": stars_today
@@ -74,7 +80,7 @@ def scrape_github_trending(language, limit, since="daily"):
     return results
 
 def main():
-    # print(f"--- Fetching Top {LIMIT} Trending Repositories ({SINCE.capitalize()}) ---\n")
+    # print(f"--- Fetching Top {NUM_REPOS} Trending Repositories ({TIME_PERIOD.capitalize()}) ---\n")
     
     all_data = {}
     
@@ -83,7 +89,7 @@ def main():
         url_lang = lang.lower().replace(" ", "-")
         # print(f"Fetching trending repos for: '{lang}'...")
         
-        repos = scrape_github_trending(url_lang, LIMIT, SINCE)
+        repos = scrape_github_trending(url_lang, NUM_REPOS, TIME_PERIOD)
         all_data[lang] = repos
         
         # Polite delay between requests to be respectful to GitHub's servers
@@ -92,7 +98,7 @@ def main():
     # Output Results
     print("\n" + "=" * 60)
     for lang, repos in all_data.items():
-        print(f"\n### TOP {LIMIT} TRENDING IN: {lang.upper()}")
+        print(f"\n### TOP {NUM_REPOS} TRENDING IN: {lang.upper()}")
         print("-" * 60)
         
         if not repos:
@@ -101,9 +107,11 @@ def main():
             
         for i, repo in enumerate(repos, start=1):
             print(f"{i}. {repo['name']}")
-            print(f"   URL: {repo['url']}")
             print(f"   Stars: {repo['stars']} | Growth: {repo['period_stars']}")
             print(f"   Desc: {repo['description']}\n")
+            # print(f"   URL: {repo['url']}")
+
+# = }}}
 
 if __name__ == "__main__":
     main()
