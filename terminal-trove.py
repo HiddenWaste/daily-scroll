@@ -2,7 +2,11 @@ from urllib.parse import urljoin
 from bs4 import BeautifulSoup
 from curl_cffi import requests
 
+####################
+# SCRAPE FUNCTIONS #
+####################
 
+# = {{{
 def get_terminal_trove_tool_of_the_week():
   url = "https://terminaltrove.com/"
 
@@ -62,7 +66,13 @@ def get_terminal_trove_tool_of_the_week():
 
   return {"name": name_text, "url": full_url, "description": desc_text}
 
+# = }}}
 
+########
+# MAIN #
+########
+
+# = {{{
 if __name__ == "__main__":
   print("Fetching the current Tool of the Week from Terminal Trove...\n")
   tool = get_terminal_trove_tool_of_the_week()
@@ -71,5 +81,7 @@ if __name__ == "__main__":
     print("=" * 50)
     print(f"🛠️  TOOL OF THE WEEK: {tool['name']}")
     print("=" * 50)
-    print(f"URL:         {tool['url']}")
+    # print(f"URL:         {tool['url']}")
     print(f"Description: {tool['description']}")
+
+# = }}}
