@@ -1,5 +1,6 @@
 import datetime
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -30,6 +31,7 @@ TARGET_SCRIPTS = [
 
 OUTPUT_PDF = "daily_scroll.pdf"
 KINDLE_DIR = "/media/compy/Kindle/documents/"
+SCRAPER_DIR = "./scrapers/"
 
 # = }}}
 
@@ -39,13 +41,17 @@ KINDLE_DIR = "/media/compy/Kindle/documents/"
 
 # = {{{
 def run_script_and_capture_output(script_name: str) -> str:
-    """Runs a Python script and captures its stdout and stderr."""
-    if not os.path.exists(script_name):
-        return f"[Error: Script '{script_name}' not found in current directory.]"
+    """Runs a Python script inside SCRAPER_DIR and captures stdout/stderr."""
+    script_path = os.path.join(SCRAPER_DIR, script_name)
+
+    if not os.path.exists(script_path):
+        return f"[Error: Script '{script_name}' not found at path '{script_path}'.]"
 
     try:
+        # Run script with cwd set to SCRAPER_DIR so local imports/credentials work seamlessly
         result = subprocess.run(
-            [sys.executable, script_name],
+            [sys.executable, os.path.basename(script_path)],
+            cwd=SCRAPER_DIR,
             capture_output=True,
             text=True,
             timeout=30,
@@ -66,6 +72,30 @@ def run_script_and_capture_output(script_name: str) -> str:
         return f"[Error running '{script_name}': {e}]"
 
 
+def split_github_output_by_language(raw_text: str) -> list[dict]:
+    """Splits output from gh.py into separate section entries for each language."""
+    # Matches headers like "### TOP 5 TRENDING IN: PYTHON"
+    pattern = r"(### TOP \d+ TRENDING IN: [^\n]+)"
+    parts = re.split(pattern, raw_text)
+
+    # If parsing doesn't find language headers, fall back to returning raw text
+    if len(parts) <= 1:
+        return [{"title": "GitHub Trending Repositories", "output": raw_text}]
+
+    sections = []
+    # If there is preamble text before the first heading, include it
+    if parts[0].strip():
+        sections.append({"title": "GitHub Trending Overview", "output": parts[0].strip()})
+
+    # Step through matched headings and content pairs
+    for i in range(1, len(parts), 2):
+        header = parts[i].replace("###", "").strip()
+        body = parts[i + 1].strip() if i + 1 < len(parts) else ""
+        sections.append({"title": header, "output": f"{header}\n{body}"})
+
+    return sections
+
+
 def generate_pdf(sections: list, output_filename: str):
     """Converts ANSI text outputs into styled HTML optimized for Kindle devices."""
     conv = Ansi2HTMLConverter(inline=True, dark_bg=False)
@@ -75,13 +105,16 @@ def generate_pdf(sections: list, output_filename: str):
     for section in sections:
         title = section["title"]
         raw_text = section["output"]
+        page_break = section.get("page_break_after", False)
 
         # Convert ANSI colors/formatting into inline styled HTML spans
         formatted_html = conv.convert(raw_text, full=False)
 
+        break_class = " page-break-after" if page_break else ""
+
         html_sections.append(
             f"""
-        <div class="section">
+        <div class="section{break_class}">
             <h2 class="section-header">{title}</h2>
             <pre class="terminal-output">{formatted_html}</pre>
         </div>
@@ -134,6 +167,12 @@ def generate_pdf(sections: list, output_filename: str):
             .section {{
                 margin-bottom: 24px;
             }}
+            
+            /* Forces page break between specific items like GitHub language sections */
+            .page-break-after {{
+                page-break-after: always;
+            }}
+            
             .section-header {{
                 font-size: 18pt;
                 font-weight: bold;
@@ -199,9 +238,19 @@ def main():
         title = item["title"]
         script = item["script"]
 
-        print(f" -> Running {script}...")
+        print(f" -> Running {script} from {SCRAPER_DIR}...")
         output = run_script_and_capture_output(script)
-        collected_data.append({"title": title, "output": output})
+
+        # Special handling for gh.py to break each language onto its own page
+        if script == "gh.py":
+            gh_sections = split_github_output_by_language(output)
+            for idx, gh_sec in enumerate(gh_sections):
+                # Mark page_break_after = True for all language blocks except the last one
+                is_last = idx == len(gh_sections) - 1
+                gh_sec["page_break_after"] = not is_last
+                collected_data.append(gh_sec)
+        else:
+            collected_data.append({"title": title, "output": output})
 
     print(f"📄 Compiling outputs into '{OUTPUT_PDF}'...")
     generate_pdf(collected_data, OUTPUT_PDF)
@@ -213,5 +262,5 @@ def main():
 
 if __name__ == "__main__":
     main()
-    
+
 # = }}}
