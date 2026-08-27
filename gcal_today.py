@@ -6,8 +6,21 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
+#################
+# CONFIGURATION #
+#################
+
+# = {{{
+
 SCOPES = ["https://www.googleapis.com/auth/calendar.readonly"]
 
+# = }}}
+
+####################
+# SCRAPE FUNCTIONS #
+####################
+
+# = {{{
 
 def get_calendar_service():
   """Handles local authentication with Google OAuth2."""
@@ -116,6 +129,7 @@ def get_today_events_all_calendars():
   except HttpError as error:
     print(f"An API error occurred: {error}")
 
+# = }}}
 
 if __name__ == "__main__":
   get_today_events_all_calendars()
