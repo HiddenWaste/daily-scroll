@@ -1,0 +1,13 @@
+# Scraping & HTTP Clients
+requests>=2.31.0
+beautifulsoup4>=4.12.0
+curl-cffi>=0.7.0
+
+# PDF Generation & Terminal Formatting
+weasyprint>=61.0
+ansi2html>=1.9.0
+
+# Google Calendar API & Authentication
+google-api-python-client>=2.110.0
+google-auth-httplib2>=0.2.0
+google-auth-oauthlib>=1.2.0

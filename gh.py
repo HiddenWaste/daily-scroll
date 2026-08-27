@@ -74,14 +74,14 @@ def scrape_github_trending(language, limit, since="daily"):
     return results
 
 def main():
-    print(f"--- Fetching Top {LIMIT} Trending Repositories ({SINCE.capitalize()}) ---\n")
+    # print(f"--- Fetching Top {LIMIT} Trending Repositories ({SINCE.capitalize()}) ---\n")
     
     all_data = {}
     
     for lang in LANGUAGES:
         # Normalize language slug for URLs (e.g., C++ -> c++)
         url_lang = lang.lower().replace(" ", "-")
-        print(f"Fetching trending repos for: '{lang}'...")
+        # print(f"Fetching trending repos for: '{lang}'...")
         
         repos = scrape_github_trending(url_lang, LIMIT, SINCE)
         all_data[lang] = repos
